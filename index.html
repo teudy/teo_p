@@ -48,7 +48,7 @@
         balance += h * 0.0000000001;
         document.getElementById("hashrate").innerText = `Hashrate: ${h} H/s`;
         document.getElementById("btc").innerText = `Balance BTC estimado: ${balance.toFixed(8)}`;
-        document.getElementById("dop").innerText = `Balance en RD$: RD$ ${(balance * tasa).toFixed(2)}`;
+        document.getElementById("dop").innerText = `Balance en RD$: ${(balance * tasa).toFixed(2)}`;
       }, 1000);
     }
 
