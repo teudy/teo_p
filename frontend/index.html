@@ -3,100 +3,305 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Retiro KuCoin BTC / USDT</title>
+<title>Simulador BTCMovil</title>
 <style>
-  body { font-family: Arial, sans-serif; background: #121212; color: white; padding: 20px; }
-  label { display: block; margin-top: 10px; }
-  input, button { padding: 8px; width: 100%; max-width: 400px; margin-top: 5px; border-radius: 5px; border: none; }
-  button { background: #fcd703; color: #121212; font-weight: bold; cursor: pointer; }
-  button:hover { background: #d4b800; }
-  #saldo { margin-top: 20px; font-weight: bold; }
-  #mensaje { margin-top: 15px; }
+  body {
+    font-family: Arial, sans-serif;
+    background: #121212;
+    color: white;
+    margin: 0; padding: 20px;
+  }
+  #balance {
+    font-size: 22px;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  #buttons {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  button {
+    background: #fcd703;
+    border: none;
+    padding: 12px 20px;
+    margin: 0 10px;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    color: #121212;
+    transition: background 0.3s ease;
+  }
+  button:hover {
+    background: #d4b800;
+  }
+  .modal-overlay {
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.75);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+  }
+  .modal {
+    background: #222;
+    padding: 20px;
+    border-radius: 8px;
+    width: 320px;
+    max-width: 90%;
+    color: white;
+    box-shadow: 0 0 10px #000;
+    position: relative;
+  }
+  .modal h2 {
+    margin-top: 0;
+  }
+  .modal label {
+    display: block;
+    margin-top: 10px;
+  }
+  .modal input, .modal select {
+    width: 100%;
+    padding: 8px;
+    margin-top: 4px;
+    border-radius: 4px;
+    border: none;
+    font-size: 16px;
+  }
+  .modal button {
+    margin-top: 15px;
+    width: 100%;
+    background: #fcd703;
+    color: #121212;
+    font-weight: bold;
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+  }
+  .modal button:hover {
+    background: #d4b800;
+  }
+  .close-btn {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: transparent;
+    border: none;
+    font-size: 22px;
+    color: #fcd703;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  #history {
+    max-width: 400px;
+    margin: 0 auto;
+    background: #222;
+    padding: 15px;
+    border-radius: 8px;
+  }
+  #history h3 {
+    text-align: center;
+  }
+  #history ul {
+    list-style: none;
+    padding-left: 0;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  #history ul li {
+    padding: 6px 8px;
+    border-bottom: 1px solid #444;
+  }
 </style>
 </head>
 <body>
 
-<h1>Solicitar Retiro BTC / USDT</h1>
+<div id="balance">Balance Peso Dominicano: 0 DOP | Balance Dólares: $0.00 USD</div>
 
-<div>
-  <label for="currency">Moneda (BTC o USDT):</label>
-  <input type="text" id="currency" value="BTC" />
-  
-  <label for="amount">Monto a retirar:</label>
-  <input type="number" id="amount" step="any" min="0" />
-  
-  <label for="address">Dirección de wallet:</label>
-  <input type="text" id="address" />
-  
-  <label for="memo">Memo (opcional):</label>
-  <input type="text" id="memo" />
-  
-  <button onclick="solicitarRetiro()">Solicitar Retiro</button>
-  
-  <p id="mensaje"></p>
+<div id="buttons">
+  <button id="btnCrypto">Retiro BTC / USDT</button>
+  <button id="btnBanks">Retiro Bancos RD</button>
 </div>
 
-<div id="saldo"></div>
+<!-- Modal Crypto -->
+<div id="modalCrypto" class="modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalCryptoTitle">
+    <button class="close-btn" aria-label="Cerrar">&times;</button>
+    <h2 id="modalCryptoTitle">Retiro BTC / USDT</h2>
+    <form id="formCrypto">
+      <label for="cryptoWallet">Dirección Wallet (BTC o USDT):</label>
+      <input type="text" id="cryptoWallet" name="cryptoWallet" required placeholder="Ej: 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" />
+      <label for="cryptoAmount">Monto a retirar (USD):</label>
+      <input type="number" id="cryptoAmount" name="cryptoAmount" min="1" step="0.01" required placeholder="Ej: 10.50" />
+      <button type="submit">Enviar Retiro</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Banks -->
+<div id="modalBanks" class="modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalBanksTitle">
+    <button class="close-btn" aria-label="Cerrar">&times;</button>
+    <h2 id="modalBanksTitle">Retiro Bancos República Dominicana</h2>
+    <form id="formBanks">
+      <label for="bankName">Banco:</label>
+      <select id="bankName" name="bankName" required>
+        <option value="">Seleccione un banco</option>
+        <option value="Banco Popular">Banco Popular</option>
+        <option value="Banreservas">Banreservas</option>
+        <option value="Banco BHD León">Banco BHD León</option>
+        <option value="Scotiabank">Scotiabank</option>
+        <option value="Banco Santa Cruz">Banco Santa Cruz</option>
+        <option value="Qik Banco">Qik Banco</option>
+      </select>
+      <label for="accountNumber">Número de Cuenta:</label>
+      <input type="text" id="accountNumber" name="accountNumber" required placeholder="Ej: 1234567890" />
+      <label for="accountName">Nombre del Titular:</label>
+      <input type="text" id="accountName" name="accountName" required placeholder="Nombre completo" />
+      <label for="bankAmount">Monto a retirar (DOP):</label>
+      <input type="number" id="bankAmount" name="bankAmount" min="1" step="1" required placeholder="Ej: 1000" />
+      <button type="submit">Enviar Retiro</button>
+    </form>
+  </div>
+</div>
+
+<div id="history">
+  <h3>Historial de Retiros</h3>
+  <ul id="historyList"></ul>
+</div>
 
 <script>
-  const API_BASE = 'https://TU_BACKEND.onrender.com'; // Cambia por tu URL real
-  const API_TOKEN = 'secret_token_123'; // Debe coincidir con el backend
+  const pesoPorScore = 100; // 1 punto = 100 DOP
+  const tasaCambioUSD = 54; // 54 DOP = 1 USD
 
-  async function consultarSaldo() {
-    const currency = document.getElementById('currency').value.trim().toUpperCase();
-    if (!currency) return;
-    try {
-      const res = await fetch(`${API_BASE}/saldo/${currency}`, {
-        headers: { 'x-api-key': API_TOKEN }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        document.getElementById('saldo').innerText = `Saldo disponible en ${currency}: ${data.balance}`;
-      } else {
-        document.getElementById('saldo').innerText = 'Error: ' + data.detail;
-      }
-    } catch (e) {
-      document.getElementById('saldo').innerText = 'Error al consultar saldo.';
-    }
+  let score = 10; // Simulación inicial de puntos (puedes cambiar)
+  const balanceDiv = document.getElementById('balance');
+  const btnCrypto = document.getElementById('btnCrypto');
+  const btnBanks = document.getElementById('btnBanks');
+  const modalCrypto = document.getElementById('modalCrypto');
+  const modalBanks = document.getElementById('modalBanks');
+  const historyList = document.getElementById('historyList');
+
+  // Actualizar balance en pantalla
+  function updateBalance() {
+    const balanceDOP = score * pesoPorScore;
+    const balanceUSD = (balanceDOP / tasaCambioUSD).toFixed(2);
+    balanceDiv.textContent = `Balance Peso Dominicano: ${balanceDOP} DOP | Balance Dólares: $${balanceUSD} USD`;
   }
 
-  document.getElementById('currency').addEventListener('change', consultarSaldo);
-  window.onload = consultarSaldo;
-
-  async function solicitarRetiro() {
-    const currency = document.getElementById('currency').value.trim().toUpperCase();
-    const amount = parseFloat(document.getElementById('amount').value);
-    const address = document.getElementById('address').value.trim();
-    const memo = document.getElementById('memo').value.trim() || null;
-
-    if (!currency || !amount || !address) {
-      document.getElementById('mensaje').innerText = 'Por favor completa todos los campos obligatorios.';
-      return;
-    }
-
-    document.getElementById('mensaje').innerText = 'Enviando solicitud...';
-
-    try {
-      const response = await fetch(`${API_BASE}/retiro`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-api-key': API_TOKEN
-        },
-        body: JSON.stringify({ currency, amount, address, memo })
-      });
-      const data = await response.json();
-      if (response.ok) {
-        document.getElementById('mensaje').innerText = 'Retiro solicitado correctamente. ID: ' + data.withdrawId;
-        consultarSaldo();
-      } else {
-        document.getElementById('mensaje').innerText = 'Error: ' + (data.detail || 'No se pudo completar la solicitud.');
-      }
-    } catch (error) {
-      document.getElementById('mensaje').innerText = 'Error en la solicitud: ' + error.message;
-    }
+  // Abrir modal
+  function openModal(modal) {
+    modal.style.display = 'flex';
   }
+  // Cerrar modal
+  function closeModal(modal) {
+    modal.style.display = 'none';
+  }
+
+  // Cerrar modal al hacer clic en la X
+  document.querySelectorAll('.close-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      closeModal(e.target.closest('.modal-overlay'));
+    });
+  });
+
+  btnCrypto.addEventListener('click', () => openModal(modalCrypto));
+  btnBanks.addEventListener('click', () => openModal(modalBanks));
+
+  // Historial guardado en localStorage
+  function cargarHistorial() {
+    const data = JSON.parse(localStorage.getItem('historialRetiros') || '[]');
+    historyList.innerHTML = '';
+    data.forEach(item => {
+      const li = document.createElement('li');
+      li.textContent = `${item.fecha} - ${item.tipo} - ${item.detalle} - Monto: ${item.monto} ${item.moneda}`;
+      historyList.appendChild(li);
+    });
+  }
+
+  // Guardar en historial localStorage
+  function guardarHistorial(item) {
+    const data = JSON.parse(localStorage.getItem('historialRetiros') || '[]');
+    data.unshift(item); // agrega al inicio
+    if (data.length > 20) data.pop(); // máximo 20 items
+    localStorage.setItem('historialRetiros', JSON.stringify(data));
+    cargarHistorial();
+  }
+
+  // Formulario Retiro Crypto
+  document.getElementById('formCrypto').addEventListener('submit', e => {
+    e.preventDefault();
+    const wallet = e.target.cryptoWallet.value.trim();
+    const amount = parseFloat(e.target.cryptoAmount.value);
+
+    const balanceDOP = score * pesoPorScore;
+    const balanceUSD = balanceDOP / tasaCambioUSD;
+
+    if (!wallet) return alert("Ingresa una dirección válida.");
+    if (isNaN(amount) || amount <= 0) return alert("Monto inválido.");
+    if (amount > balanceUSD) return alert(`Saldo insuficiente. Disponible USD: $${balanceUSD.toFixed(2)}`);
+
+    // Simular retiro
+    alert(`Retiro solicitado para wallet ${wallet} por $${amount.toFixed(2)} USD`);
+
+    // Reducir score según monto
+    const deductScore = Math.ceil((amount * tasaCambioUSD) / pesoPorScore);
+    score = Math.max(0, score - deductScore);
+    updateBalance();
+
+    // Guardar historial
+    guardarHistorial({
+      fecha: new Date().toLocaleString(),
+      tipo: 'Crypto',
+      detalle: wallet,
+      monto: amount.toFixed(2),
+      moneda: 'USD'
+    });
+
+    closeModal(modalCrypto);
+    e.target.reset();
+  });
+
+  // Formulario Retiro Bancos
+  document.getElementById('formBanks').addEventListener('submit', e => {
+    e.preventDefault();
+    const bank = e.target.bankName.value;
+    const account = e.target.accountNumber.value.trim();
+    const name = e.target.accountName.value.trim();
+    const amount = parseInt(e.target.bankAmount.value, 10);
+
+    const balanceDOP = score * pesoPorScore;
+
+    if (!bank) return alert("Selecciona un banco.");
+    if (!account) return alert("Ingresa el número de cuenta.");
+    if (!name) return alert("Ingresa el nombre del titular.");
+    if (isNaN(amount) || amount <= 0) return alert("Monto inválido.");
+    if (amount > balanceDOP) return alert(`Saldo insuficiente. Disponible DOP: ${balanceDOP}`);
+
+    alert(`Retiro solicitado al banco ${bank}, cuenta ${account}, titular ${name}, por ${amount} DOP`);
+
+    // Reducir score según monto
+    const deductScore = Math.ceil(amount / pesoPorScore);
+    score = Math.max(0, score - deductScore);
+    updateBalance();
+
+    // Guardar historial
+    guardarHistorial({
+      fecha: new Date().toLocaleString(),
+      tipo: 'Banco',
+      detalle: `${bank} - ${account} - ${name}`,
+      monto: amount,
+      moneda: 'DOP'
+    });
+
+    closeModal(modalBanks);
+    e.target.reset();
+  });
+
+  // Inicializar
+  updateBalance();
+  cargarHistorial();
 </script>
-
 </body>
 </html>
