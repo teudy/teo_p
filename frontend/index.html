@@ -1,0 +1,68 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>BTCMovil - Minero Web</title>
+  <style>
+    body { font-family: Arial; background: #0f172a; color: white; text-align: center; padding: 30px; }
+    .panel { background: #1e293b; padding: 20px; border-radius: 12px; margin-top: 20px; box-shadow: 0 0 12px #22c55e88; }
+    input, select { padding: 8px; margin: 5px; border-radius: 6px; border: none; }
+    button { padding: 10px 20px; background: #22c55e; border: none; color: white; cursor: pointer; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h1>🪙 BTCMovil</h1>
+  <div class="panel">
+    <h2>Balance BTC: <span id="balance">0.00000000</span></h2>
+    <h3>Balance en DOP: RD$ <span id="balance_dop">0.00</span></h3>
+    <button onclick="iniciarMinado()">Iniciar Minería</button>
+  </div>
+
+  <div class="panel">
+    <h2>Solicitar Retiro</h2>
+    <form id="retiroForm">
+      <input type="text" id="wallet" placeholder="Tu Wallet BTC" required><br>
+      <input type="number" id="monto" step="any" placeholder="Monto a retirar (BTC)" required><br>
+      <select id="metodo">
+        <option value="qik">Banco (Qik - RD$)</option>
+        <option value="usdt">USDT (TRON)</option>
+      </select><br>
+      <input type="text" id="cuenta" placeholder="Cuenta Qik o Wallet USDT" required><br>
+      <button type="submit">Enviar Retiro</button>
+    </form>
+  </div>
+
+  <script>
+    let balance = 0;
+    let tasa = 3570;
+    let minando = false;
+
+    function iniciarMinado() {
+      if (minando) return;
+      minando = true;
+      setInterval(() => {
+        balance += 0.00000010;
+        document.getElementById("balance").innerText = balance.toFixed(8);
+        document.getElementById("balance_dop").innerText = (balance * tasa).toFixed(2);
+      }, 1000);
+    }
+
+    document.getElementById("retiroForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const wallet = document.getElementById("wallet").value;
+      const monto = parseFloat(document.getElementById("monto").value);
+      const metodo = document.getElementById("metodo").value;
+      const cuenta = document.getElementById("cuenta").value;
+
+      const res = await fetch("https://teoo.onrender.com/solicitar-retiro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet, monto, metodo, cuenta })
+      });
+      const data = await res.json();
+      alert(data.message || "Retiro enviado.");
+    });
+  </script>
+</body>
+</html>
