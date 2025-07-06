@@ -1,102 +1,91 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BTCMovil KuCoin Minero</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BTCMovil Retiro</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #121212; color: white; padding: 20px; }
+  label { display: block; margin-top: 10px; }
+  input, button { padding: 8px; width: 100%; max-width: 400px; margin-top: 5px; border-radius: 5px; border: none; }
+  button { background: #fcd703; color: #121212; font-weight: bold; cursor: pointer; }
+  button:hover { background: #d4b800; }
+  #saldo { margin-top: 20px; font-weight: bold; }
+</style>
 </head>
 <body>
-  <h1>Consulta de Saldo y Retiros KuCoin</h1>
 
-  <div>
-    <label for="currency">Moneda (Ej: BTC, USDT):</label>
-    <input type="text" id="currency" value="BTC" />
-    <button onclick="consultarSaldo()">Consultar Saldo</button>
-  </div>
+<h1>Solicitar Retiro BTC / USDT</h1>
 
-  <div>
-    <p id="saldo">Saldo: -</p>
-  </div>
+<div>
+  <label for="currency">Moneda (BTC o USDT):</label>
+  <input type="text" id="currency" value="BTC" />
+  
+  <label for="amount">Monto a retirar:</label>
+  <input type="number" id="amount" step="any" min="0" />
+  
+  <label for="address">Dirección de wallet:</label>
+  <input type="text" id="address" />
+  
+  <label for="memo">Memo (opcional):</label>
+  <input type="text" id="memo" />
+  
+  <button onclick="solicitarRetiro()">Solicitar Retiro</button>
+  
+  <p id="mensaje"></p>
+</div>
 
-  <h2>Solicitar Retiro</h2>
-  <form id="retiroForm">
-    <label>Moneda:</label>
-    <input type="text" id="retMoneda" required value="BTC" /><br/>
-    <label>Monto:</label>
-    <input type="number" step="any" id="retMonto" required /><br/>
-    <label>Dirección:</label>
-    <input type="text" id="retDireccion" required /><br/>
-    <label>Memo (opcional):</label>
-    <input type="text" id="retMemo" /><br/>
-    <button type="submit">Enviar Retiro</button>
-  </form>
+<div id="saldo"></div>
 
-  <h2>Historial de Retiros</h2>
-  <ul id="historial"></ul>
+<script>
+  const API_BASE = 'https://TU_SERVICIO.onrender.com'; // Cambia por la URL real de tu backend
 
-  <script>
-    const API_BASE = "http://localhost:8000"; // Cambia por tu backend desplegado
-
-    async function consultarSaldo() {
-      const currency = document.getElementById('currency').value;
-      const res = await fetch(`${API_BASE}/saldo/${currency}`);
+  async function consultarSaldo() {
+    const currency = document.getElementById('currency').value.toUpperCase();
+    if (!currency) return;
+    try {
+      const res = await fetch(\`\${API_BASE}/saldo/\${currency}\`);
       const data = await res.json();
-      document.getElementById('saldo').innerText = `Saldo ${data.currency}: ${data.balance}`;
-      cargarHistorial();
+      document.getElementById('saldo').innerText = \`Saldo disponible en \${currency}: \${data.balance}\`;
+    } catch (e) {
+      document.getElementById('saldo').innerText = 'Error al consultar saldo.';
+    }
+  }
+
+  document.getElementById('currency').addEventListener('change', consultarSaldo);
+  window.onload = consultarSaldo;
+
+  async function solicitarRetiro() {
+    const currency = document.getElementById('currency').value.trim().toUpperCase();
+    const amount = parseFloat(document.getElementById('amount').value);
+    const address = document.getElementById('address').value.trim();
+    const memo = document.getElementById('memo').value.trim() || null;
+
+    if (!currency || !amount || !address) {
+      document.getElementById('mensaje').innerText = 'Por favor completa todos los campos obligatorios.';
+      return;
     }
 
-    async function cargarHistorial() {
-      const res = await fetch(`${API_BASE}/historial`);
-      const data = await res.json();
-      const historial = data.retiros || [];
-      const ul = document.getElementById('historial');
-      ul.innerHTML = '';
-      historial.forEach(item => {
-        const li = document.createElement('li');
-        const date = new Date(item.timestamp * 1000).toLocaleString();
-        li.innerText = `[${date}] ${item.amount} ${item.currency} a ${item.address}`;
-        ul.appendChild(li);
-      });
-    }
+    document.getElementById('mensaje').innerText = 'Enviando solicitud...';
 
-    document.getElementById('retiroForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const moneda = document.getElementById('retMoneda').value;
-      const monto = parseFloat(document.getElementById('retMonto').value);
-      const direccion = document.getElementById('retDireccion').value;
-      const memo = document.getElementById('retMemo').value || null;
-
-      if (!moneda || !monto || !direccion) {
-        alert("Completa todos los campos obligatorios");
-        return;
-      }
-
-      const res = await fetch(`${API_BASE}/retiro`, {
+    try {
+      const response = await fetch(\`\${API_BASE}/retiro\`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          currency: moneda,
-          amount: monto,
-          address: direccion,
-          memo: memo
-        })
+        body: JSON.stringify({ currency, amount, address, memo })
       });
-
-      const data = await res.json();
+      const data = await response.json();
       if (data.success) {
-        alert("Retiro solicitado correctamente.");
-        cargarHistorial();
-        document.getElementById('retiroForm').reset();
+        document.getElementById('mensaje').innerText = 'Retiro solicitado correctamente. ID: ' + data.withdrawId;
+        consultarSaldo();
       } else {
-        alert("Error al solicitar retiro: " + (data.detail || ''));
+        document.getElementById('mensaje').innerText = 'Error: ' + (data.detail || 'No se pudo completar la solicitud.');
       }
-    });
+    } catch (error) {
+      document.getElementById('mensaje').innerText = 'Error en la solicitud: ' + error.message;
+    }
+  }
+</script>
 
-    window.onload = () => {
-      consultarSaldo();
-      cargarHistorial();
-    };
-  </script>
 </body>
 </html>
