@@ -7,9 +7,9 @@ import uvicorn
 app = FastAPI()
 
 API_TOKEN = os.getenv("API_TOKEN", "secret_token_123")
-KUCOIN_API_KEY = os.getenv("KUCOIN_API_KEY")
-KUCOIN_API_SECRET = os.getenv("KUCOIN_API_SECRET")
-KUCOIN_API_PASSPHRASE = os.getenv("KUCOIN_API_PASSPHRASE")
+KUCOIN_API_KEY = os.getenv("686a937f2301b10001e746cf")
+KUCOIN_API_SECRET = os.getenv("c9ff963a-b522-47f4-b58b-68e171b18fa4")
+KUCOIN_API_PASSPHRASE = os.getenv("Radicales.588")
 
 if not all([KUCOIN_API_KEY, KUCOIN_API_SECRET, KUCOIN_API_PASSPHRASE]):
     raise Exception("Falta configurar las claves KuCoin en variables de entorno")
