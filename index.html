@@ -17,6 +17,18 @@
 </style>
 </head>
 <body>
+  <div style="max-width:400px; margin: 20px auto; background:#111; padding:20px; border-radius:8px; color:#eee; font-family:sans-serif;">
+  <h2>Solicitar Retiro BTC</h2>
+  <label for="montoRetiro">Monto a retirar (BTC):</label><br>
+  <input type="number" id="montoRetiro" min="0.000075" step="0.000001" placeholder="Ej: 0.0001" style="width:100%; padding:8px; margin:8px 0; border-radius:4px; border:none;"><br>
+  <button id="btnRetirar" style="padding:10px 20px; background:#0a0; border:none; color:#fff; cursor:pointer; border-radius:4px;">Retirar</button>
+  
+  <div id="retiroResultado" style="margin-top:20px; font-weight:bold;"></div>
+  
+  <h3 style="margin-top:30px;">Historial de Retiros</h3>
+  <div id="retiroHistorial" style="max-height:200px; overflow-y:auto; background:#222; padding:10px; border-radius:5px;"></div>
+</div>
+
 
 <h1>BTCMovil - Minería y Retiros KuCoin</h1>
 
