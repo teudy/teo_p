@@ -1,21 +1,20 @@
 async function hacerRetiro(monto) {
   mostrarMensaje("Procesando retiro...", "#ff0");
   try {
-    const res = await fetch("https://teo-p.onrender.com/retiro", {
+    const res = await fetch("https://teo-p.onrender.com/retiro", {  // URL corregida
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": "secret_token_123"  // No olvides este header!
+        "x-api-key": "secret_token_123"  // Header obligatorio
       },
       body: JSON.stringify({
         currency: "BTC",
         amount: monto,
-        address: wallet  // Asegúrate que wallet esté definido y sea válido
+        address: wallet  // wallet debe estar definida con la dirección BTC del usuario
       })
     });
 
     const text = await res.text();
-    // Primero mostrar la respuesta cruda para depurar
     console.log("Respuesta cruda del servidor:", text);
 
     let data;
