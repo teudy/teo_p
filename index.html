@@ -1,51 +1,268 @@
-<script>
-  // ... (tus variables y funciones anteriores se mantienen igual)
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BTCMovil - Minería y Retiros KuCoin</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #121212; color: #eee; margin: 0; padding: 20px; }
+    h1 { text-align: center; color: #f39c12; }
+    #walletInput, #btnConnect, #btnStartMine, #btnResetMine, #btnWithdraw { padding: 10px; margin: 5px; font-size: 1em; }
+    #balance { font-size: 2em; margin: 10px 0; text-align: center; }
+    #history { max-height: 200px; overflow-y: auto; background: #222; padding: 10px; border-radius: 5px; margin-top: 10px; }
+    .history-item { border-bottom: 1px solid #333; padding: 5px 0; }
+    .btn { cursor: pointer; background: #f39c12; border: none; border-radius: 4px; color: #121212; font-weight: bold; }
+    .btn:disabled { background: #555; cursor: not-allowed; }
+    #notice { color: #f39c12; font-weight: bold; margin-top: 10px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div style="max-width:400px; margin: 20px auto; background:#111; padding:20px; border-radius:8px; color:#eee; font-family:sans-serif;">
+    <h2>Solicitar Retiro BTC</h2>
+    <label for="montoRetiro">Monto a retirar (BTC):</label><br>
+    <input type="number" id="montoRetiro" min="0.000075" step="0.000001" placeholder="Ej: 0.0001" style="width:100%; padding:8px; margin:8px 0; border-radius:4px; border:none;"><br>
+    <button id="btnRetirar" style="padding:10px 20px; background:#0a0; border:none; color:#fff; cursor:pointer; border-radius:4px;">Retirar</button>
+    <div id="retiroResultado" style="margin-top:20px; font-weight:bold;"></div>
+    <h3 style="margin-top:30px;">Historial de Retiros</h3>
+    <div id="retiroHistorial" style="max-height:200px; overflow-y:auto; background:#222; padding:10px; border-radius:5px;"></div>
+  </div>
 
-  async function hacerRetiro(monto) {
-    mostrarMensaje("Procesando retiro...", "#ff0");
-    try {
-      const res = await fetch("https://teo-p.onrender.com/retiro", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": "secret_token_123"
-        },
-        body: JSON.stringify({
-          currency: "BTC",
-          amount: monto,
-          address: wallet,
-          memo: ""
-        })
-      });
+  <h1>BTC - Minería y Retiros</h1>
+  <div style="text-align:center;">
+    <input id="walletInput" placeholder="Ingresa tu wallet BTC" size="40" />
+    <button id="btnConnect" class="btn">Conectar Wallet</button>
+  </div>
 
-      const text = await res.text();  // Captura texto sin asumir que es JSON
-      console.log("Respuesta cruda del servidor:", text);
+  <div id="balance">Balance BTC: 0.00000000</div>
+  <div id="balanceDOP" style="text-align:center; margin-bottom: 15px;">Balance DOP: 0</div>
 
-      if (!text) {
-        mostrarError("El servidor no devolvió respuesta.");
-        return;
-      }
+  <div style="text-align:center;">
+    <button id="btnStartMine" class="btn" disabled>Iniciar Minado</button>
+    <button id="btnResetMine" class="btn" disabled>Minado desde el principio</button>
+  </div>
 
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        mostrarError("Respuesta inválida del servidor.");
-        console.error("Error al convertir JSON:", e);
-        return;
-      }
+  <div style="text-align:center; margin-top: 20px;">
+    <button id="btnWithdraw" class="btn" disabled>Solicitar Retiro BTC</button>
+  </div>
 
-      if (res.ok && data.success) {
-        mostrarResultado(data);
-        guardarHistorial(data);
-        mostrarHistorial();
-      } else {
-        mostrarError(data.detail || data.message || "Error desconocido.");
-      }
-    } catch (err) {
-      mostrarError("Error de red: " + err.message);
+  <div id="notice">Nota: Se cobrará una comisión del 5% sobre el monto retirado.</div>
+
+  <h3>Historial de Retiros</h3>
+  <div id="history"></div>
+
+  <script>
+    let wallet = "";
+    let balanceBTC = 0;
+    let balanceDOP = 0;
+    let miningInterval = null;
+    let miningRate = 0.00000005;
+
+    const storageKeyBalance = (w) => `balance_${w}`;
+    const storageKeyHistory = (w) => `history_${w}`;
+
+    function updateBalances() {
+      document.getElementById('balance').textContent = `Balance BTC: ${balanceBTC.toFixed(8)}`;
+      document.getElementById('balanceDOP').textContent = `Balance DOP: ${convertBTCtoDOP(balanceBTC).toFixed(2)}`;
     }
-  }
 
-  // ... (todo el resto del código sigue igual)
-</script>
+    function convertBTCtoDOP(btc) {
+      return btc * 1200;
+    }
+
+    function saveBalance() {
+      localStorage.setItem(storageKeyBalance(wallet), balanceBTC);
+    }
+
+    function loadBalance() {
+      const saved = localStorage.getItem(storageKeyBalance(wallet));
+      balanceBTC = saved ? parseFloat(saved) : 0;
+      updateBalances();
+    }
+
+    function saveHistory(history) {
+      localStorage.setItem(storageKeyHistory(wallet), JSON.stringify(history));
+    }
+
+    function loadHistory() {
+      const raw = localStorage.getItem(storageKeyHistory(wallet));
+      return raw ? JSON.parse(raw) : [];
+    }
+
+    function showHistory() {
+      const history = loadHistory();
+      const container = document.getElementById('history');
+      container.innerHTML = "";
+      if(history.length === 0) {
+        container.textContent = "No hay retiros aún.";
+        return;
+      }
+      history.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        div.textContent = `Anonymous - Monto: ${item.amount.toFixed(8)} BTC - Fecha: ${new Date(item.date).toLocaleString()}`;
+        container.appendChild(div);
+      });
+    }
+
+    function startMining() {
+      if(miningInterval) return;
+      miningInterval = setInterval(() => {
+        balanceBTC += miningRate;
+        updateBalances();
+        saveBalance();
+      }, 1000);
+    }
+
+    function stopMining() {
+      if(miningInterval) {
+        clearInterval(miningInterval);
+        miningInterval = null;
+      }
+    }
+
+    function resetMining() {
+      stopMining();
+      balanceBTC = 0;
+      updateBalances();
+      saveBalance();
+    }
+
+    async function hacerRetiro(monto) {
+      mostrarMensaje("Procesando retiro...", "#ff0");
+      try {
+        const res = await fetch("https://teo-p.onrender.com/retiro", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": "secret_token_123"
+          },
+          body: JSON.stringify({
+            currency: "BTC",
+            amount: monto,
+            address: wallet,
+            memo: ""
+          })
+        });
+
+        const text = await res.text();
+        if (!text) {
+          mostrarError("El servidor no devolvió respuesta.");
+          return;
+        }
+
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          mostrarError("Respuesta inválida del servidor.");
+          console.error("Error al parsear JSON:", e);
+          return;
+        }
+
+        if (res.ok && data.success) {
+          mostrarResultado(data);
+          guardarHistorial(data);
+          mostrarHistorial();
+        } else {
+          mostrarError(data.detail || data.message || "Error desconocido.");
+        }
+      } catch (err) {
+        mostrarError("Error de red: " + err.message);
+      }
+    }
+
+    function mostrarResultado(data) {
+      const div = document.getElementById("retiroResultado");
+      div.style.color = "#0f0";
+      div.innerHTML = `
+        Retiro exitoso:<br>
+        Enviado a: ${data.usuario.wallet} <br>
+        Monto neto: ${data.usuario.monto_enviado.toFixed(8)} BTC <br>
+        Comisión enviada: ${data.comision.monto_enviado.toFixed(8)} BTC
+      `;
+    }
+
+    function mostrarError(msg) {
+      const div = document.getElementById("retiroResultado");
+      div.style.color = "#f00";
+      div.textContent = "Error: " + msg;
+    }
+
+    function mostrarMensaje(msg, color) {
+      const div = document.getElementById("retiroResultado");
+      div.style.color = color || "#fff";
+      div.textContent = msg;
+    }
+
+    function guardarHistorial(data) {
+      const history = loadHistory();
+      history.push({
+        amount: data.usuario.monto_enviado,
+        date: new Date().toISOString()
+      });
+      saveHistory(history);
+    }
+
+    function mostrarHistorial() {
+      const container = document.getElementById("retiroHistorial");
+      const history = loadHistory();
+      container.innerHTML = "";
+      if (history.length === 0) {
+        container.innerHTML = "<p style='color:#aaa;'>No hay retiros realizados.</p>";
+        return;
+      }
+      history.slice().reverse().forEach(item => {
+        const div = document.createElement("div");
+        div.style.borderBottom = "1px solid #444";
+        div.style.padding = "5px 0";
+        div.innerHTML = `
+          <strong>Anonymous</strong><br>
+          Fecha: ${new Date(item.date).toLocaleString()}<br>
+          Monto neto: ${item.amount.toFixed(8)} BTC
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    document.getElementById("btnRetirar").addEventListener("click", () => {
+      const montoInput = document.getElementById("montoRetiro");
+      const monto = parseFloat(montoInput.value);
+      if (isNaN(monto) || monto < 0.000075) {
+        mostrarError("Ingresa un monto válido mayor o igual a 0.000075 BTC");
+        return;
+      }
+      hacerRetiro(monto);
+    });
+
+    document.getElementById('btnConnect').onclick = () => {
+      const input = document.getElementById('walletInput').value.trim();
+      if(!input) {
+        alert("Por favor ingresa tu wallet BTC.");
+        return;
+      }
+      wallet = input;
+      loadBalance();
+      showHistory();
+      document.getElementById('btnStartMine').disabled = false;
+      document.getElementById('btnResetMine').disabled = false;
+      document.getElementById('btnWithdraw').disabled = false;
+      alert(`Wallet ${wallet} conectada.`);
+    };
+
+    document.getElementById('btnStartMine').onclick = () => {
+      startMining();
+    };
+
+    document.getElementById('btnResetMine').onclick = () => {
+      resetMining();
+    };
+
+    document.getElementById('btnWithdraw').onclick = () => {
+      stopMining();
+      hacerRetiro(balanceBTC);
+    };
+
+    mostrarHistorial();
+  </script>
+</body>
+</html>
