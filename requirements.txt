@@ -1,4 +1,2 @@
 fastapi
 uvicorn
-kucoin-python
-pydantic
