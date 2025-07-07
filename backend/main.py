@@ -5,7 +5,6 @@ app = FastAPI()
 @app.post("/api/retirar")
 async def retirar(request: Request):
     datos = await request.json()
-    # lógica para procesar el retiro...
     return {
         "success": True,
         "usuario": {
