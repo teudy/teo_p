@@ -1,68 +1,41 @@
-import os
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from kucoin.client import User
-import uvicorn
 
 app = FastAPI()
 
-API_TOKEN = os.getenv("API_TOKEN", "secret_token_123")
-KUCOIN_API_KEY = os.getenv("686a937f2301b10001e746cf")
-KUCOIN_API_SECRET = os.getenv("c9ff963a-b522-47f4-b58b-68e171b18fa4")
-KUCOIN_API_PASSPHRASE = os.getenv("Radicales.588")
+# Permitir acceso desde cualquier origen
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-if not all([KUCOIN_API_KEY, KUCOIN_API_SECRET, KUCOIN_API_PASSPHRASE]):
-    raise Exception("Falta configurar las claves KuCoin en variables de entorno")
-
-kucoin_client = User(KUCOIN_API_KEY, KUCOIN_API_SECRET, KUCOIN_API_PASSPHRASE, is_sandbox=False)
-
-def verificar_token(x_api_key: str = Header(...)):
-    if x_api_key != API_TOKEN:
-        raise HTTPException(status_code=401, detail="No autorizado")
-
-class RetiroData(BaseModel):
-    currency: str
+class RetiroRequest(BaseModel):
+    wallet: str
     amount: float
-    address: str
-    memo: str = None
 
-@app.get("/saldo/{currency}")
-async def saldo(currency: str, x_api_key: str = Header(...)):
-    verificar_token(x_api_key)
-    currency = currency.upper()
-    try:
-        balances = kucoin_client.get_accounts()
-        for b in balances:
-            if b['currency'].upper() == currency:
-                return {"currency": currency, "balance": float(b['available'])}
-        return {"currency": currency, "balance": 0.0}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.post("/api/retirar")
+async def retirar(request: Request, retiro: RetiroRequest):
+    api_key = request.headers.get("x-api-key")
+    if api_key != "secret_token_123":
+        raise HTTPException(status_code=401, detail="API Key inválida")
 
-@app.post("/retiro")
-async def retiro(data: RetiroData, x_api_key: str = Header(...)):
-    verificar_token(x_api_key)
-    currency = data.currency.upper()
-    try:
-        balances = kucoin_client.get_accounts()
-        available = 0.0
-        for b in balances:
-            if b['currency'].upper() == currency:
-                available = float(b['available'])
-                break
+    if retiro.amount < 0.000075:
+        raise HTTPException(status_code=400, detail="Monto mínimo no alcanzado")
 
-        if data.amount > available:
-            raise HTTPException(status_code=400, detail=f"Saldo insuficiente. Disponible: {available}")
+    comision = round(retiro.amount * 0.05, 8)
+    neto = round(retiro.amount - comision, 8)
 
-        result = kucoin_client.create_withdraw(
-            currency=currency,
-            amount=str(data.amount),
-            address=data.address,
-            memo=data.memo or ""
-        )
-        return {"success": True, "withdrawId": result.get('withdrawalId')}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Simular respuesta
+    return {
+        "success": True,
+        "usuario": {
+            "wallet": retiro.wallet,
+            "monto_enviado": neto
+        },
+        "comision": {
+            "monto_enviado": comision
+        }
+    }
