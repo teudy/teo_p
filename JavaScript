@@ -1,93 +1,40 @@
-const wallet = "TU_WALLET_BTC"; // Cambia aquí por la wallet real del usuario o variable dinámica
-
-document.getElementById("btnRetirar").addEventListener("click", () => {
-  const montoInput = document.getElementById("montoRetiro");
-  const monto = parseFloat(montoInput.value);
-  
-  if (isNaN(monto) || monto < 0.000075) {
-    mostrarError("Ingresa un monto válido mayor o igual a 0.000075 BTC");
-    return;
-  }
-  
-  hacerRetiro(monto);
-});
-
 async function hacerRetiro(monto) {
   mostrarMensaje("Procesando retiro...", "#ff0");
   try {
-    const res = await fetch("https://teo-p.onrender.com/api/retirar", {
+    const res = await fetch("https://teo-p.onrender.com/retiro", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ wallet, amount: monto })
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": "secret_token_123"  // No olvides este header!
+      },
+      body: JSON.stringify({
+        currency: "BTC",
+        amount: monto,
+        address: wallet  // Asegúrate que wallet esté definido y sea válido
+      })
     });
-    const data = await res.json();
-    if (data.success) {
+
+    const text = await res.text();
+    // Primero mostrar la respuesta cruda para depurar
+    console.log("Respuesta cruda del servidor:", text);
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch(e) {
+      mostrarError("Respuesta inválida del servidor");
+      console.error("Error parseando JSON:", e);
+      return;
+    }
+
+    if (res.ok && data.success) {
       mostrarResultado(data);
       guardarHistorial(data);
       mostrarHistorial();
     } else {
-      mostrarError(data.message);
+      mostrarError(data.detail || data.message || "Error desconocido");
     }
   } catch (err) {
-    mostrarError(err.message);
+    mostrarError("Error de red o servidor: " + err.message);
   }
 }
-
-function mostrarResultado(data) {
-  const div = document.getElementById("retiroResultado");
-  div.style.color = "#0f0";
-  div.innerHTML = `
-    Retiro exitoso:<br>
-    Enviado a: ${data.usuario.wallet} <br>
-    Monto neto: ${data.usuario.monto_enviado.toFixed(8)} BTC <br>
-    Comisión enviada: ${data.comision.monto_enviado.toFixed(8)} BTC
-  `;
-}
-
-function mostrarError(msg) {
-  const div = document.getElementById("retiroResultado");
-  div.style.color = "#f00";
-  div.textContent = "Error: " + msg;
-}
-
-function mostrarMensaje(msg, color) {
-  const div = document.getElementById("retiroResultado");
-  div.style.color = color || "#fff";
-  div.textContent = msg;
-}
-
-function guardarHistorial(data) {
-  const history = JSON.parse(localStorage.getItem("historialRetiros") || "[]");
-  history.push({
-    wallet: data.usuario.wallet,
-    monto_neto: data.usuario.monto_enviado,
-    comision: data.comision.monto_enviado,
-    fecha: new Date().toISOString()
-  });
-  localStorage.setItem("historialRetiros", JSON.stringify(history));
-}
-
-function mostrarHistorial() {
-  const container = document.getElementById("retiroHistorial");
-  const history = JSON.parse(localStorage.getItem("historialRetiros") || "[]");
-  container.innerHTML = "";
-  if (history.length === 0) {
-    container.innerHTML = "<p style='color:#aaa;'>No hay retiros realizados.</p>";
-    return;
-  }
-  history.slice().reverse().forEach(item => {
-    const div = document.createElement("div");
-    div.style.borderBottom = "1px solid #444";
-    div.style.padding = "5px 0";
-    div.innerHTML = `
-      <strong>Anonymous</strong><br>
-      Fecha: ${new Date(item.fecha).toLocaleString()}<br>
-      Monto neto: ${item.monto_neto.toFixed(8)} BTC<br>
-      Comisión: ${item.comision.toFixed(8)} BTC
-    `;
-    container.appendChild(div);
-  });
-}
-
-// Mostrar historial guardado al cargar
-mostrarHistorial();
